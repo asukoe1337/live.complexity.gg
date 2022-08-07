@@ -1,1 +1,2276 @@
-ngetes
+
+<!DOCTYPE html>
+<html xmlns="https://www.w3.org/1999/xhtml">
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" >
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+		<meta name="robots" content="noindex,nofollow">
+		<title>Responsive FileManager</title>
+		<link rel="shortcut icon" href="img/ico/favicon.ico">
+		<link href="css/style.css" rel="stylesheet" type="text/css" />
+		<link href="js/jPlayer/skin/blue.monday/jplayer.blue.monday.css" rel="stylesheet" type="text/css">
+	<!--[if lt IE 8]><style>
+	.img-container span, .img-container-mini span {
+		display: inline-block;
+		height: 100%;
+	}
+	</style><![endif]-->
+	<script src="js/plugins.js"></script>
+	<script src="js/jPlayer/jquery.jplayer/jquery.jplayer.js"></script>
+	<script src="js/modernizr.custom.js"></script>
+			<script src="https://dme0ih8comzn4.cloudfront.net/imaging/v2/editor.js"></script>
+	
+	<!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+	<!--[if lt IE 9]>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.6.2/html5shiv.js"></script>
+	<![endif]-->
+
+	<script>
+		var ext_img=new Array('jpg','jpeg','png','gif','bmp','tiff','svg');
+		var allowed_ext=new Array('jpg','jpeg','png','gif','bmp','tiff','svg','doc','docx','rtf','pdf','xls','xlsx','txt','csv','html','xhtml','psd','sql','log','fla','xml','ade','adp','mdb','accdb','ppt','pptx','odt','ots','ott','odb','odg','otp','otg','odf','ods','odp','css','ai','zip','rar','gz','tar','iso','dmg','mov','mpeg','m4v','mp4','avi','mpg','wma','flv','webm','mp3','m4a','ac3','aiff','mid','ogg','wav');
+		var image_editor=true;
+		//dropzone config
+		Dropzone.options.rfmDropzone = {
+			dictInvalidFileType: "File extension is not allowed.",
+			dictFileTooBig: "The uploaded file exceeds the max size allowed.",
+			dictDefaultMessage: "Drop file here to upload",
+			dictResponseError: "SERVER ERROR",
+			paramName: "file", // The name that will be used to transfer the file
+			maxFilesize: 1, // MB
+			url: "upload.php",
+						accept: function(file, done) {
+				var extension=file.name.split('.').pop();
+				extension=extension.toLowerCase();
+				if ($.inArray(extension, allowed_ext) > -1) {
+					done();
+				}
+				else {
+					done("File extension is not allowed.");
+				}
+			}
+		};
+		if (image_editor) {
+		var featherEditor = new Aviary.Feather({
+		apiKey: "2444282ef4344e3dacdedc7a78f8877d",language: "en",theme: "light",tools: "all",maxSize: "1400",			onReady: function() {
+				hide_animation();
+			},
+			onSave: function(imageID, newURL) {
+				show_animation();
+				var img = document.getElementById(imageID);
+				img.src = newURL;
+				$.ajax({
+					type: "POST",
+					url: "ajax_calls.php?action=save_img",
+					data: { url: newURL, path:$('#sub_folder').val()+$('#fldr_value').val(), name:$('#aviary_img').attr('data-name') }
+				}).done(function( msg ) {
+					featherEditor.close();
+					d = new Date();
+					$("figure[data-name='"+$('#aviary_img').attr('data-name')+"']").find('img').each(function(){
+					$(this).attr('src',$(this).attr('src')+"?"+d.getTime());
+					});
+					$("figure[data-name='"+$('#aviary_img').attr('data-name')+"']").find('figcaption a.preview').each(function(){
+					$(this).attr('data-url',$(this).data('url')+"?"+d.getTime());
+					});
+					hide_animation();
+				});
+				return false;
+			},
+			onError: function(errorObj) {
+					bootbox.alert(errorObj.message);
+					hide_animation();
+			}
+
+	});
+		}
+	</script>
+	<script src="js/include.js"></script>
+</head>
+<body>
+	<input type="hidden" id="popup" value="" />
+	<input type="hidden" id="crossdomain" value="" />
+	<input type="hidden" id="editor" value="" />
+	<input type="hidden" id="view" value="0" />
+	<input type="hidden" id="subdir" value="" />
+	<input type="hidden" id="field_id" value="" />
+	<input type="hidden" id="type_param" value="0" />
+	<input type="hidden" id="cur_dir" value="/source/" />
+	<input type="hidden" id="cur_dir_thumb" value="../thumbs/" />
+	<input type="hidden" id="insert_folder_name" value="Insert folder name:" />
+	<input type="hidden" id="new_folder" value="New Folder" />
+	<input type="hidden" id="ok" value="OK" />
+	<input type="hidden" id="cancel" value="Cancel" />
+	<input type="hidden" id="rename" value="Rename" />
+	<input type="hidden" id="lang_duplicate" value="Duplicate" />
+	<input type="hidden" id="duplicate" value="1" />
+	<input type="hidden" id="base_url" value="https://www.inspirecomm.co.th"/>
+	<input type="hidden" id="fldr_value" value=""/>
+	<input type="hidden" id="sub_folder" value=""/>
+	<input type="hidden" id="return_relative_url" value="0"/>
+	<input type="hidden" id="lazy_loading_file_number_threshold" value="0"/>
+	<input type="hidden" id="file_number_limit_js" value="500" />
+	<input type="hidden" id="sort_by" value="name" />
+	<input type="hidden" id="descending" value="1" />
+	<input type="hidden" id="current_url" value="https://www.inspirecomm.co.th/filemanager/dialog.php" />
+	<input type="hidden" id="lang_show_url" value="Show URL" />
+	<input type="hidden" id="copy_cut_files_allowed" value="1" />
+	<input type="hidden" id="copy_cut_dirs_allowed" value="1" />
+	<input type="hidden" id="copy_cut_max_size" value="100" />
+	<input type="hidden" id="copy_cut_max_count" value="200" />
+	<input type="hidden" id="lang_copy" value="Copy" />
+	<input type="hidden" id="lang_cut" value="Cut" />
+	<input type="hidden" id="lang_paste" value="Paste" />
+	<input type="hidden" id="lang_paste_here" value="Paste to this directory" />
+	<input type="hidden" id="lang_paste_confirm" value="Are you sure you want to paste to this directory? This will overwrite existing files/folders if encountered any." />
+	<input type="hidden" id="lang_files" value="Files" />
+	<input type="hidden" id="lang_folders" value="Folders" />
+	<input type="hidden" id="lang_files_on_clipboard" value="There are files on the clipboard." />
+	<input type="hidden" id="clipboard" value="0" />
+	<input type="hidden" id="lang_clear_clipboard_confirm" value="Are you sure you want to clear the clipboard?" />
+	<input type="hidden" id="lang_file_permission" value="File permission" />
+	<input type="hidden" id="chmod_files_allowed" value="1" />
+	<input type="hidden" id="chmod_dirs_allowed" value="1" />
+	<input type="hidden" id="lang_lang_change" value="Change the language" />
+	<input type="hidden" id="edit_text_files_allowed" value="1" />
+	<input type="hidden" id="lang_edit_file" value="Edit file's content" />
+	<input type="hidden" id="lang_new_file" value="New File" />
+	<input type="hidden" id="lang_filename" value="Filename" />
+	<input type="hidden" id="lang_file_info" value="FILE INFO" />
+	<input type="hidden" id="lang_edit_image" value="Edit image" />
+	<input type="hidden" id="lang_select" value="Select" />
+	<input type="hidden" id="lang_extract" value="Extract here" />
+	<input type="hidden" id="transliteration" value="false" />
+	<input type="hidden" id="convert_spaces" value="false" />
+	<input type="hidden" id="replace_with" value="" />
+	<input type="hidden" id="lower_case" value="false" />
+	<input type="hidden" id="show_folder_size" value="" />
+<!-- uploader div start -->
+<div class="uploader">
+	<div class="text-center">
+		<button class="btn btn-inverse close-uploader"><i class="icon-backward icon-white"></i> Return to files list</button>
+	</div>
+	<div class="space10"></div>
+	<div class="space10"></div>
+	<div class="tabbable upload-tabbable"> <!-- Only required for left/right tabs -->
+				<ul class="nav nav-tabs">
+			<li class="active"><a href="#tab1" data-toggle="tab">Base upload</a></li>
+			<li><a href="#tab2" id="uploader-btn" data-toggle="tab">JAVA upload (big size files)</a></li>
+		</ul>
+		<div class="tab-content">
+			<div class="tab-pane active" id="tab1">
+								<form action="dialog.php" method="post" enctype="multipart/form-data" id="rfmDropzone" class="dropzone">
+					<input type="hidden" name="path" value="../source/"/>
+					<input type="hidden" name="path_thumb" value="../thumbs/"/>
+					<div class="fallback">
+						<h3>Upload:</h3><br/>
+						<input name="file" type="file" />
+						<input type="hidden" name="fldr" value=""/>
+						<input type="hidden" name="view" value="0"/>
+						<input type="hidden" name="type" value="0"/>
+						<input type="hidden" name="field_id" value=""/>
+						<input type="hidden" name="relative_url" value=""/>
+						<input type="hidden" name="popup" value=""/>
+						<input type="hidden" name="lang" value="en_EN"/>
+						<input type="hidden" name="filter" value=""/>
+						<input type="submit" name="submit" value="OK" />
+					</div>
+				</form>
+				<div class="upload-help">Drag & Drop files or click in the area above (modern browsers) and select the file(s). When the upload is complete, click the 'Return to files list' button.</div>
+
+						</div>
+			<div class="tab-pane" id="tab2">
+				<div id="iframe-container"></div>
+				<div class="upload-help">If the Java Applet doesn't load, 1. make sure you have Java installed, otherwise <a href='http://java.com/en/download/'>[download link]</a>   2. make sure nothing is blocked by your firewall</div>
+						</div>
+		</div>
+	</div>
+
+</div>
+<!-- uploader div start -->
+
+		<div class="container-fluid">
+
+<!-- header div start -->
+<div class="navbar navbar-fixed-top">
+	<div class="navbar-inner">
+		<div class="container-fluid">
+		<button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+		<span class="icon-bar"></span>
+		</button>
+		<div class="brand">Toolbar</div>
+		<div class="nav-collapse collapse">
+		<div class="filters">
+			<div class="row-fluid">
+			<div class="span4 half">
+								<button class="tip btn upload-btn" title="Upload"><i class="rficon-upload"></i></button>
+												<button class="tip btn create-file-btn" title="New File"><i class="icon-plus"></i><i class="icon-file"></i></button>
+												<button class="tip btn new-folder" title="New Folder"><i class="icon-plus"></i><i class="icon-folder-open"></i></button>
+												<button class="tip btn paste-here-btn" title="Paste to this directory"><i class="rficon-clipboard-apply"></i></button>
+				<button class="tip btn clear-clipboard-btn" title="Clear clipboard"><i class="rficon-clipboard-clear"></i></button>
+							</div>
+			<div class="span2 half view-controller">
+				<button class="btn tip btn-inverse" id="view0" data-value="0" title="Box view"><i class="icon-th icon-white"></i></button>
+				<button class="btn tip" id="view1" data-value="1" title="List view"><i class="icon-align-justify "></i></button>
+				<button class="btn tip" id="view2" data-value="2" title="Columns list view"><i class="icon-fire "></i></button>
+			</div>
+			<div class="span6 entire types">
+				<span>Filters:</span>
+													<input id="select-type-1" name="radio-sort" type="radio" data-item="ff-item-type-1" checked="checked"  class="hide"  />
+				<label id="ff-item-type-1" title="Files" for="select-type-1" class="tip btn ff-label-type-1"><i class="icon-file"></i></label>
+														<input id="select-type-2" name="radio-sort" type="radio" data-item="ff-item-type-2" class="hide"  />
+				<label id="ff-item-type-2" title="Images" for="select-type-2" class="tip btn ff-label-type-2"><i class="icon-picture"></i></label>
+														<input id="select-type-3" name="radio-sort" type="radio" data-item="ff-item-type-3" class="hide"  />
+				<label id="ff-item-type-3" title="Archives" for="select-type-3" class="tip btn ff-label-type-3"><i class="icon-inbox"></i></label>
+														<input id="select-type-4" name="radio-sort" type="radio" data-item="ff-item-type-4" class="hide"  />
+				<label id="ff-item-type-4" title="Videos" for="select-type-4" class="tip btn ff-label-type-4"><i class="icon-film"></i></label>
+														<input id="select-type-5" name="radio-sort" type="radio" data-item="ff-item-type-5" class="hide"  />
+				<label id="ff-item-type-5" title="Music" for="select-type-5" class="tip btn ff-label-type-5"><i class="icon-music"></i></label>
+													<input accesskey="f" type="text" class="filter-input " id="filter-input" name="filter" placeholder="text filter..." value=""/>
+				<input id="select-type-all" name="radio-sort" type="radio" data-item="ff-item-type-all" class="hide"  />
+				<label id="ff-item-type-all" title="All"  data-item="ff-item-type-all" for="select-type-all" style="margin-rigth:0px;" class="tip btn btn-inverse ff-label-type-all"><i class="icon-remove icon-white"></i></label>
+
+			</div>
+			</div>
+		</div>
+		</div>
+	</div>
+	</div>
+</div>
+
+<!-- header div end -->
+
+	<!-- breadcrumb div start -->
+
+	<div class="row-fluid">
+		<ul class="breadcrumb">
+	<li class="pull-left"><a href="dialog.php?editor=0&type=0&lang=en_EN&popup=0&crossdomain=0&extensions=%22%22&field_id=&relative_url=0&akey=key&fldr=/"><i class="icon-home"></i></a></li>
+	<li><span class="divider">/</span></li>
+	
+	<li class="pull-right"><a class="btn-small" href="javascript:void('')" id="info"><i class="icon-question-sign"></i></a></li>
+		<li class="pull-right"><a id="refresh" class="btn-small" href="dialog.php?editor=0&type=0&lang=en_EN&popup=0&crossdomain=0&extensions=%22%22&field_id=&relative_url=0&akey=key&fldr=&62ef3d8a2e865"><i class="icon-refresh"></i></a></li>
+
+	<li class="pull-right">
+		<div class="btn-group">
+		<a class="btn dropdown-toggle sorting-btn" data-toggle="dropdown" href="#">
+		<i class="icon-signal"></i>
+		<span class="caret"></span>
+		</a>
+		<ul class="dropdown-menu pull-left sorting">
+			<li class="text-center"><strong>sorting</strong></li>
+		<li><a class="sorter sort-name descending" href="javascript:void('')" data-sort="name">Filename</a></li>
+		<li><a class="sorter sort-date " href="javascript:void('')" data-sort="date">Date</a></li>
+		<li><a class="sorter sort-size " href="javascript:void('')" data-sort="size">Size</a></li>
+		<li><a class="sorter sort-extension " href="javascript:void('')" data-sort="extension">Type</a></li>
+		</ul>
+		</div>
+	</li>
+	<li><small class="hidden-phone">(<span id="files_number">42</span> Files - <span id='folders_number'>0</span> Folders)</small></li>
+		</ul>
+	</div>
+	<!-- breadcrumb div end -->
+	<div class="row-fluid ff-container">
+	<div class="span12">
+				<h4 id="help">Swipe the name of file/folder to show options</h4>
+						<!-- sorter -->
+		<div class="sorter-container list-view0">
+		<div class="file-name"><a class="sorter sort-name descending" href="javascript:void('')" data-sort="name">Filename</a></div>
+		<div class="file-date"><a class="sorter sort-date " href="javascript:void('')" data-sort="date">Date</a></div>
+		<div class="file-size"><a class="sorter sort-size " href="javascript:void('')" data-sort="size">Size</a></div>
+		<div class='img-dimension'>Dimension</div>
+		<div class='file-extension'><a class="sorter sort-extension " href="javascript:void('')" data-sort="extension">Type</a></div>
+		<div class='file-operations'>Operations</div>
+		</div>
+		
+		<input type="hidden" id="file_number" value="44" />
+		<!--ul class="thumbnails ff-items"-->
+		<ul class="grid cs-style-2 list-view0" id="main-item-container">
+					<li class="ff-item-type-2 file"  data-name="wisp-02-3.png" >		<figure data-name="wisp-02-3.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wisp-02-3.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wisp-02-3.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wisp-02-3.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wisp-02-3.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wisp-02-3</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551545427"/>
+				<input type="hidden" class="size" value="56003"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wisp-02-3.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">55 KB</div>
+				<div class='img-dimension'>394x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form2">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wisp-02-3.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form2').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wisp-02-3.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wisp-02-3.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wisp-02-3.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="wisp-02-2.png" >		<figure data-name="wisp-02-2.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wisp-02-2.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wisp-02-2.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wisp-02-2.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wisp-02-2.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wisp-02-2</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551545427"/>
+				<input type="hidden" class="size" value="55207"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wisp-02-2.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">54 KB</div>
+				<div class='img-dimension'>395x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form3">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wisp-02-2.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form3').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wisp-02-2.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wisp-02-2.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wisp-02-2.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="wisp-02-1.png" >		<figure data-name="wisp-02-1.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wisp-02-1.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wisp-02-1.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wisp-02-1.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wisp-02-1.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wisp-02-1</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551545427"/>
+				<input type="hidden" class="size" value="66332"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wisp-02-1.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">65 KB</div>
+				<div class='img-dimension'>394x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form4">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wisp-02-1.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form4').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wisp-02-1.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wisp-02-1.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wisp-02-1.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="wc2-3.png" >		<figure data-name="wc2-3.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wc2-3.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wc2-3.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wc2-3.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wc2-3.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wc2-3</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547717"/>
+				<input type="hidden" class="size" value="63939"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wc2-3.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">62 KB</div>
+				<div class='img-dimension'>394x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form5">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wc2-3.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form5').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wc2-3.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wc2-3.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wc2-3.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="wc2-2.png" >		<figure data-name="wc2-2.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wc2-2.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wc2-2.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wc2-2.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wc2-2.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wc2-2</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547685"/>
+				<input type="hidden" class="size" value="59524"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wc2-2.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">58 KB</div>
+				<div class='img-dimension'>395x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form6">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wc2-2.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form6').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wc2-2.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wc2-2.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wc2-2.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="wc2-1.png" >		<figure data-name="wc2-1.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="wc2-1.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/wc2-1.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/wc2-1.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="wc2-1.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				wc2-1</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547685"/>
+				<input type="hidden" class="size" value="52681"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="wc2-1.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">51 KB</div>
+				<div class='img-dimension'>394x282</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form7">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="wc2-1.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form7').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/wc2-1.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="wc2-1.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="wc2-1.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-1 file"  data-name="source.txt" >		<figure data-name="source.txt" data-type="file">
+				<a href="javascript:void('')" class="link" data-file="source.txt" data-function="apply_none">
+				<div class="img-precontainer">
+					<div class="filetype">txt</div>					<div class="img-container">
+						<span></span>
+						<img class=" icon lazy-loaded" data-original="img/ico/txt.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini ">
+					<div class="filetype txt edit-text-file-allowed ">txt</div>
+					<div class="img-container-mini">
+					<span></span>
+										</div>
+				</div>
+								<div class="cover"></div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="source.txt" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				source</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240378"/>
+				<input type="hidden" class="size" value="14"/>
+				<input type="hidden" class="extension" value="txt"/>
+				<input type="hidden" class="name" value="source.txt"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">14 B</div>
+				<div class='img-dimension'></div>
+				<div class='file-extension'>txt</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form8">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="source.txt"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form8').submit();"><i class="icon-download"></i></a>
+											<a class="tip-right file-preview-btn" title="Preview" data-url="ajax_calls.php?action=get_file&sub_action=preview&preview_mode=text&title=source&file=source.txt"
+						href="javascript:void('');" ><i class=" icon-eye-open"></i></a>
+											<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="source.txt">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="source.txt">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="products.png" >		<figure data-name="products.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="products.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/products.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/products.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="products.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				products</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551549220"/>
+				<input type="hidden" class="size" value="42855"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="products.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">42 KB</div>
+				<div class='img-dimension'>670x376</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form9">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="products.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form9').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/products.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="products.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="products.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="product-image-for-2000-webpage2.jpg" >		<figure data-name="product-image-for-2000-webpage2.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="product-image-for-2000-webpage2.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/product-image-for-2000-webpage2.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/product-image-for-2000-webpage2.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="product-image-for-2000-webpage2.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				product-image-for-2000-webpage2</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547393"/>
+				<input type="hidden" class="size" value="18344"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="product-image-for-2000-webpage2.jpg"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">18 KB</div>
+				<div class='img-dimension'>400x400</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form10">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="product-image-for-2000-webpage2.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form10').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/product-image-for-2000-webpage2.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="product-image-for-2000-webpage2.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="product-image-for-2000-webpage2.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="oss-WINtouch.png" >		<figure data-name="oss-WINtouch.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="oss-WINtouch.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/oss-WINtouch.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/oss-WINtouch.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="oss-WINtouch.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				oss-WINtouch</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551550227"/>
+				<input type="hidden" class="size" value="173930"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="oss-wintouch.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">170 KB</div>
+				<div class='img-dimension'>960x617</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form11">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="oss-WINtouch.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form11').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/oss-WINtouch.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="oss-WINtouch.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="oss-WINtouch.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="oss-WINManage.png" >		<figure data-name="oss-WINManage.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="oss-WINManage.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/oss-WINManage.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/oss-WINManage.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="oss-WINManage.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				oss-WINManage</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551550226"/>
+				<input type="hidden" class="size" value="221464"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="oss-winmanage.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">216 KB</div>
+				<div class='img-dimension'>960x617</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form12">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="oss-WINManage.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form12').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/oss-WINManage.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="oss-WINManage.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="oss-WINManage.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="oss-WINDeploy.png" >		<figure data-name="oss-WINDeploy.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="oss-WINDeploy.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/oss-WINDeploy.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/oss-WINDeploy.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="oss-WINDeploy.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				oss-WINDeploy</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551550222"/>
+				<input type="hidden" class="size" value="273305"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="oss-windeploy.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">267 KB</div>
+				<div class='img-dimension'>960x617</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form13">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="oss-WINDeploy.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form13').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/oss-WINDeploy.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="oss-WINDeploy.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="oss-WINDeploy.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="oss-R-Planner.png" >		<figure data-name="oss-R-Planner.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="oss-R-Planner.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/oss-R-Planner.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/oss-R-Planner.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="oss-R-Planner.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				oss-R-Planner</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551550224"/>
+				<input type="hidden" class="size" value="214355"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="oss-r-planner.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">209 KB</div>
+				<div class='img-dimension'>960x617</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form14">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="oss-R-Planner.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form14').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/oss-R-Planner.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="oss-R-Planner.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="oss-R-Planner.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new8.jpg" >		<figure data-name="new8.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new8.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new8.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new8.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new8.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new8</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240977"/>
+				<input type="hidden" class="size" value="3413720"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new8.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">3 MB</div>
+				<div class='img-dimension'>1191x5838</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form15">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new8.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form15').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new8.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new8.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new8.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new7.jpg" >		<figure data-name="new7.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new7.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new7.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new7.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new7.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new7</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240976"/>
+				<input type="hidden" class="size" value="1678293"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new7.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x3033</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form16">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new7.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form16').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new7.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new7.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new7.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new6.jpg" >		<figure data-name="new6.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new6.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new6.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new6.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new6.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new6</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240978"/>
+				<input type="hidden" class="size" value="2407998"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new6.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x5811</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form17">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new6.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form17').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new6.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new6.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new6.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new5.jpg" >		<figure data-name="new5.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new5.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new5.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new5.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new5.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new5</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240975"/>
+				<input type="hidden" class="size" value="2131653"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new5.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x2896</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form18">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new5.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form18').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new5.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new5.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new5.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new4.jpg" >		<figure data-name="new4.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new4.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new4.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new4.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new4.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new4</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240974"/>
+				<input type="hidden" class="size" value="2431077"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new4.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x2996</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form19">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new4.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form19').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new4.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new4.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new4.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new3.jpg" >		<figure data-name="new3.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new3.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new3.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new3.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new3.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new3</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240973"/>
+				<input type="hidden" class="size" value="1725542"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new3.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x2400</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form20">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new3.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form20').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new3.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new3.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new3.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new2.jpg" >		<figure data-name="new2.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new2.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new2.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new2.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new2.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new2</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240973"/>
+				<input type="hidden" class="size" value="1554178"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new2.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1191x2835</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form21">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new2.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form21').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new2.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new2.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new2.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new1.jpg" >		<figure data-name="new1.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new1.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new1.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new1.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new1.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new1</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240976"/>
+				<input type="hidden" class="size" value="2912312"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new1.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">3 MB</div>
+				<div class='img-dimension'>1191x3200</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form22">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new1.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form22').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new1.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new1.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new1.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="new0.jpg" >		<figure data-name="new0.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="new0.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/new0.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/new0.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="new0.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				new0</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1548240972"/>
+				<input type="hidden" class="size" value="2516729"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="new0.jpg"/>
+				<div class="file-date">19-01-23</div>
+				<div class="file-size">2 MB</div>
+				<div class='img-dimension'>1191x3066</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form23">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="new0.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form23').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/new0.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="new0.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="new0.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetWave 2316-LTE-E_1.png" >		<figure data-name="JetWave 2316-LTE-E_1.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetWave 2316-LTE-E_1.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetWave 2316-LTE-E_1.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetWave 2316-LTE-E_1.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetWave 2316-LTE-E_1.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetWave 2316-LTE-E_1</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182360"/>
+				<input type="hidden" class="size" value="273640"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetwave 2316-lte-e_1.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">267 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form24">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetWave 2316-LTE-E_1.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form24').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetWave%202316-LTE-E_1.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetWave 2316-LTE-E_1.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetWave 2316-LTE-E_1.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetWave 2316-LTE-E.png" >		<figure data-name="JetWave 2316-LTE-E.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetWave 2316-LTE-E.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetWave 2316-LTE-E.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetWave 2316-LTE-E.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetWave 2316-LTE-E.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetWave 2316-LTE-E</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182367"/>
+				<input type="hidden" class="size" value="273640"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetwave 2316-lte-e.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">267 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form25">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetWave 2316-LTE-E.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form25').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetWave%202316-LTE-E.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetWave 2316-LTE-E.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetWave 2316-LTE-E.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetWave 2212G.png" >		<figure data-name="JetWave 2212G.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetWave 2212G.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetWave 2212G.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetWave 2212G.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetWave 2212G.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetWave 2212G</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182375"/>
+				<input type="hidden" class="size" value="95841"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetwave 2212g.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">94 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form26">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetWave 2212G.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form26').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetWave%202212G.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetWave 2212G.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetWave 2212G.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet3908GM12.png" >		<figure data-name="JetNet3908GM12.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet3908GM12.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet3908GM12.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet3908GM12.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet3908GM12.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet3908GM12</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182379"/>
+				<input type="hidden" class="size" value="729926"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet3908gm12.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form27">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet3908GM12.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form27').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet3908GM12.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet3908GM12.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet3908GM12.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet 5310G.png" >		<figure data-name="JetNet 5310G.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet 5310G.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet 5310G.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet 5310G.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet 5310G.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet 5310G</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182371"/>
+				<input type="hidden" class="size" value="671528"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet 5310g.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form28">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet 5310G.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form28').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet%205310G.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet 5310G.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet 5310G.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet 5210G.png" >		<figure data-name="JetNet 5210G.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet 5210G.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet 5210G.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet 5210G.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet 5210G.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet 5210G</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182378"/>
+				<input type="hidden" class="size" value="539101"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet 5210g.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form29">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet 5210G.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form29').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet%205210G.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet 5210G.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet 5210G.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet 3705 JetNet 3705-w.png" >		<figure data-name="JetNet 3705 JetNet 3705-w.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet 3705 JetNet 3705-w.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet 3705 JetNet 3705-w.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet 3705 JetNet 3705-w.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet 3705 JetNet 3705-w.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet 3705 JetNet 3705-w</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182365"/>
+				<input type="hidden" class="size" value="790583"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet 3705 jetnet 3705-w.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form30">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet 3705 JetNet 3705-w.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form30').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet%203705%20JetNet%203705-w.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet 3705 JetNet 3705-w.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet 3705 JetNet 3705-w.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet 3008.png" >		<figure data-name="JetNet 3008.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet 3008.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet 3008.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet 3008.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet 3008.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet 3008</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182366"/>
+				<input type="hidden" class="size" value="631441"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet 3008.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form31">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet 3008.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form31').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet%203008.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet 3008.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet 3008.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetNet 2005 2005-w.png" >		<figure data-name="JetNet 2005 2005-w.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetNet 2005 2005-w.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetNet 2005 2005-w.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetNet 2005 2005-w.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetNet 2005 2005-w.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetNet 2005 2005-w</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182361"/>
+				<input type="hidden" class="size" value="705052"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetnet 2005 2005-w.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form32">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetNet 2005 2005-w.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form32').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetNet%202005%202005-w.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetNet 2005 2005-w.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetNet 2005 2005-w.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetLink 2308M.png" >		<figure data-name="JetLink 2308M.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetLink 2308M.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetLink 2308M.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetLink 2308M.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetLink 2308M.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetLink 2308M</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182375"/>
+				<input type="hidden" class="size" value="445625"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetlink 2308m.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">435 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form33">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetLink 2308M.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form33').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetLink%202308M.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetLink 2308M.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetLink 2308M.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetLink 2308.png" >		<figure data-name="JetLink 2308.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetLink 2308.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetLink 2308.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetLink 2308.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetLink 2308.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetLink 2308</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182375"/>
+				<input type="hidden" class="size" value="445625"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetlink 2308.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">435 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form34">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetLink 2308.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form34').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetLink%202308.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetLink 2308.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetLink 2308.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetLink 2108.png" >		<figure data-name="JetLink 2108.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetLink 2108.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetLink 2108.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetLink 2108.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetLink 2108.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetLink 2108</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182371"/>
+				<input type="hidden" class="size" value="445625"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetlink 2108.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">435 KB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form35">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetLink 2108.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form35').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetLink%202108.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetLink 2108.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetLink 2108.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="JetCon 1301.png" >		<figure data-name="JetCon 1301.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="JetCon 1301.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/JetCon 1301.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/JetCon 1301.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="JetCon 1301.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				JetCon 1301</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551182369"/>
+				<input type="hidden" class="size" value="738257"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="jetcon 1301.png"/>
+				<div class="file-date">19-02-26</div>
+				<div class="file-size">1 MB</div>
+				<div class='img-dimension'>1000x1000</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form36">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="JetCon 1301.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form36').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/JetCon%201301.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="JetCon 1301.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="JetCon 1301.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="jet_1.jpg" >		<figure data-name="jet_1.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="jet_1.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/jet_1.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/jet_1.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="jet_1.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				jet_1</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551545774"/>
+				<input type="hidden" class="size" value="27088"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="jet_1.jpg"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">26 KB</div>
+				<div class='img-dimension'>1280x759</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form37">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="jet_1.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form37').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/jet_1.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="jet_1.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="jet_1.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="jet.jpg" >		<figure data-name="jet.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="jet.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/jet.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/jet.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="jet.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				jet</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551105799"/>
+				<input type="hidden" class="size" value="27088"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="jet.jpg"/>
+				<div class="file-date">19-02-25</div>
+				<div class="file-size">26 KB</div>
+				<div class='img-dimension'>1280x759</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form38">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="jet.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form38').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/jet.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="jet.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="jet.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="Diagram1-WISP.png" >		<figure data-name="Diagram1-WISP.png" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="Diagram1-WISP.png" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/Diagram1-WISP.png">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype png  hide">png</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/Diagram1-WISP.png">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="Diagram1-WISP.png" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				Diagram1-WISP</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551545285"/>
+				<input type="hidden" class="size" value="12537"/>
+				<input type="hidden" class="extension" value="png"/>
+				<input type="hidden" class="name" value="diagram1-wisp.png"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">12 KB</div>
+				<div class='img-dimension'>701x376</div>
+				<div class='file-extension'>png</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form39">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="Diagram1-WISP.png"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form39').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/Diagram1-WISP.png" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="Diagram1-WISP.png">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="Diagram1-WISP.png">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="banner5.jpg" >		<figure data-name="banner5.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="banner5.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/banner5.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/banner5.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="banner5.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				banner5</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551628670"/>
+				<input type="hidden" class="size" value="383478"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="banner5.jpg"/>
+				<div class="file-date">19-03-03</div>
+				<div class="file-size">374 KB</div>
+				<div class='img-dimension'>1280x509</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form40">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="banner5.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form40').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/banner5.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="banner5.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="banner5.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="2k-03.jpg" >		<figure data-name="2k-03.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="2k-03.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/2k-03.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/2k-03.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="2k-03.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				2k-03</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547393"/>
+				<input type="hidden" class="size" value="2070"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="2k-03.jpg"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">2 KB</div>
+				<div class='img-dimension'>400x400</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form41">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="2k-03.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form41').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/2k-03.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="2k-03.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="2k-03.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="2k-02.jpg" >		<figure data-name="2k-02.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="2k-02.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/2k-02.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/2k-02.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="2k-02.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				2k-02</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547393"/>
+				<input type="hidden" class="size" value="7110"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="2k-02.jpg"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">7 KB</div>
+				<div class='img-dimension'>400x400</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form42">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="2k-02.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form42').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/2k-02.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="2k-02.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="2k-02.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+						<li class="ff-item-type-2 file"  data-name="2k-01.jpg" >		<figure data-name="2k-01.jpg" data-type="img">
+				<a href="javascript:void('')" class="link" data-file="2k-01.jpg" data-function="apply_none">
+				<div class="img-precontainer">
+										<div class="img-container">
+						<span></span>
+						<img class=" lazy-loaded" data-original="../thumbs/2k-01.jpg">
+					</div>
+				</div>
+				<div class="img-precontainer-mini original-thumb">
+					<div class="filetype jpg  hide">jpg</div>
+					<div class="img-container-mini">
+					<span></span>
+										<img class=" lazy-loaded" data-original="../thumbs/2k-01.jpg">
+										</div>
+				</div>
+								</a>
+				<a href="javascript:void('')" class="link" data-file="2k-01.jpg" data-function="apply_none">
+				<div class="box">
+				<h4 class="ellipsis">
+				2k-01</h4>
+				</div></a>
+				<input type="hidden" class="date" value="1551547393"/>
+				<input type="hidden" class="size" value="2525"/>
+				<input type="hidden" class="extension" value="jpg"/>
+				<input type="hidden" class="name" value="2k-01.jpg"/>
+				<div class="file-date">19-03-02</div>
+				<div class="file-size">2 KB</div>
+				<div class='img-dimension'>400x400</div>
+				<div class='file-extension'>jpg</div>
+				<figcaption>
+					<form action="force_download.php" method="post" class="download-form" id="form43">
+					<input type="hidden" name="path" value=""/>
+					<input type="hidden" class="name_download" name="name" value="2k-01.jpg"/>
+
+					<a title="Download" class="tip-right" href="javascript:void('')" onclick="$('#form43').submit();"><i class="icon-download"></i></a>
+										<a class="tip-right preview" title="Preview" data-url="https://www.inspirecomm.co.th/source/2k-01.jpg" data-toggle="lightbox" href="#previewLightbox"><i class=" icon-eye-open"></i></a>
+										<a href="javascript:void('')" class="tip-left edit-button rename-file-paths rename-file" title="Rename" data-path="2k-01.jpg">
+					<i class="icon-pencil "></i></a>
+
+					<a href="javascript:void('')" class="tip-left erase-button delete-file" title="Erase" data-confirm="Are you sure you want to delete this file?" data-path="2k-01.jpg">
+					<i class="icon-trash "></i>
+					</a>
+					</form>
+				</figcaption>
+			</figure>
+		</li>
+			</div>
+		</ul>
+			</div>
+	</div>
+</div>
+<script>
+	var files_prevent_duplicate = new Array();
+	</script>
+
+	<!-- lightbox div start -->
+	<div id="previewLightbox" class="lightbox hide fade"  tabindex="-1" role="dialog" aria-hidden="true">
+		<div class='lightbox-content'>
+			<img id="full-img" src="">
+		</div>
+	</div>
+	<!-- lightbox div end -->
+
+	<!-- loading div start -->
+	<div id="loading_container" style="display:none;">
+		<div id="loading" style="background-color:#000; position:fixed; width:100%; height:100%; top:0px; left:0px;z-index:100000"></div>
+		<img id="loading_animation" src="img/storing_animation.gif" alt="loading" style="z-index:10001; margin-left:-32px; margin-top:-32px; position:fixed; left:50%; top:50%"/>
+	</div>
+	<!-- loading div end -->
+
+	<!-- player div start -->
+	<div class="modal hide fade" id="previewAV">
+	<div class="modal-header">
+		<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+		<h3>Preview</h3>
+	</div>
+	<div class="modal-body">
+		<div class="row-fluid body-preview">
+				</div>
+	</div>
+
+	</div>
+	<!-- player div end -->
+	<img id='aviary_img' src='' class="hide"/>
+
+			<script>
+			$(function(){
+				$(".lazy-loaded").lazyload({
+						event: 'scrollstop'
+					});
+			});
+		</script>
+		<script>
+		var ua = navigator.userAgent.toLowerCase();
+		var isAndroid = ua.indexOf("android") > -1; //&& ua.indexOf("mobile");
+		if(isAndroid) {
+			$('li').draggable({ disabled: true });
+		}
+	</script>
+</body>
+</html>
